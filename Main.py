@@ -243,77 +243,67 @@ def is_map_enough_for_localisation():
 if robot_hostname == only_client_robot_hostname:
     print "Eeee"
     write_console("Eeee")
-elif robot_hostname == server_robot_hostname:
-    print "Oooo"
-    write_console("Oooo")
-
-
-if robot_hostname == server_robot_hostname:
-    print "it\'s server. Waiting for confirmation"
-    write_console("it\'s server. Waiting for confirmation")
-    msg_found = get_message()
-    print "found message: " + str(msg_found)
-    write_console("found message: " + str(msg_found))
-    if msg_found == ready_word:
-        print "sent ready word"
-        write_console("send ready word")
-        while True:
-            print get_message()
-            time.sleep(0.7)
-    else:
-        print "Something wrong with connection"
-        write_console("Something wrong with connection")
-
-elif robot_hostname == only_client_robot_hostname:
-    print "it\'s only client. Waiting for confirmation"
-    write_console("it\'s only client. Waiting for confirmation")
-    send_message(ready_word)
-    print "sending message"
-    write_console("sending message")
-    msg_found = get_message()
-    print "found message: " + str(msg_found)
-    write_console("found message: " + str(msg_found))
-    if msg_found == ready_word:
-        print "it\'s ready word"
-        write_console("it\'s ready word")
-        while True:
-            print send_message("Tu")
-            time.sleep(0.35)
-    else:
-        print "Something wrong with connection"
-        write_console("Something wrong with connection")
-
-
-try:
     init_sensors()
-    update_map()
-    while not is_map_built():
-        if is_map_enough_for_localisation():
-            stop_move()
-            shut_down()
-            write_console(str((robot_row - most_top) // 2) + " " + str((robot_column - most_left) // 2))
-            exit()
-        print "-" * maze_size
-        for row in range(len(maze_map)):
-            print " ".join(map(str, maze_map[row]))
+    init_camera()
+    commands_to_do = None
+    while True:
+        make_photo()
+        matrix = get_artag_matrix(photo_name)
+        if matrix:
+            shut_down_camera()
+            for _row in range(len(matrix)):
+                print " ".join(map(str, matrix[_row]))
 
-        print_all_sensors()
+            set_artag(matrix)
+            set_artag(matrix)
+            commands_to_do = list(map(int, get_commands_from_ar_tag().split(" ")[:-1]))
+            break
+        rotate_to_left_90()
+        do_some_align()
+    dir = 0
+    for com in commands_to_do:
+        if com == 0:
+            print "nihuya"
+        elif com == 1:
+            dir = (dir + 4 - 1) % 4
+        elif com == 2:
+            dir = (dir + 1) % 4
+        elif com == 3:
+            drive_cell_by_(dir)
+            do_some_align()
+    write_console("finish")
+    exit()
+elif robot_hostname == server_robot_hostname:
+    try:
+        init_sensors()
+        update_map()
+        while not is_map_built():
+            if is_map_enough_for_localisation():
+                stop_move()
+                shut_down()
+                write_console(str((robot_row - most_top) // 2) + " " + str((robot_column - most_left) // 2))
+                exit()
+            print "-" * maze_size
+            for row in range(len(maze_map)):
+                print " ".join(map(str, maze_map[row]))
 
-        if not direction_to_move_to:
-            update_path()
-        else:
-            print str(is_wall_front()) + " " + str(is_wall_left()) + " " + str(is_wall_back()) + " " + str(
-                is_wall_right())
-            do_some_align()
-            direction_now = direction_to_move_to.pop()
-            print "dir: " + str(direction_now)
-            drive_cell_by_(direction_now)
-            print "row: " + str(robot_row) + "  column: " + str(robot_column)
-            do_some_align()
-            update_robot_position_by_movement(direction_now)
-            print "update: "
-            print "row: " + str(robot_row) + "  column: " + str(robot_column)
-            update_map()
-except KeyboardInterrupt:
-    stop_move()
-    shut_down()
+            print_all_sensors()
+
+            if not direction_to_move_to:
+                update_path()
+            else:
+                print str(is_wall_front()) + " " + str(is_wall_left()) + " " + str(is_wall_back()) + " " + str(
+                    is_wall_right())
+                do_some_align()
+                direction_now = direction_to_move_to.pop()
+                print "dir: " + str(direction_now)
+                drive_cell_by_(direction_now)
+                print "row: " + str(robot_row) + "  column: " + str(robot_column)
+                do_some_align()
+                update_robot_position_by_movement(direction_now)
+                print "update: "
+                print "row: " + str(robot_row) + "  column: " + str(robot_column)
+                update_map()
+    except KeyboardInterrupt:
+        stop_move()
+        shut_down()
